@@ -19,6 +19,43 @@ struct Args {
 const DEFAULT_EXCLUDE: [&str; 3] = ["aaa", "bbb", "ccc"];
 const RED_BOLD: [&str; 2] = ["foo", "bar"];
 
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let args = Args::parse();
+
+    let mut log_reader = set_target_file(args.target_files).await?;
+    let (include_regex, exclude_regex) = set_regex(
+        args.include_targets,
+        args.exclude_targets,
+        args.dont_use_preset_exclude_targets,
+    )?;
+
+    println!("target: {:#?}", log_reader);
+    println!("include: {:#?}", include_regex);
+    println!("exclude: {:#?}", exclude_regex);
+
+    while let Ok(Some(line)) = log_reader.next_line().await {
+        let line = line.line();
+
+        if let Some(ref e) = exclude_regex {
+            if e.is_match(line) {
+                continue;
+            };
+        };
+
+        if let Some(ref e) = include_regex {
+            if !e.is_match(line) {
+                continue;
+            };
+        };
+        color_println(line).await?;
+    }
+
+    Ok(())
+}
+
+
 async fn set_target_file(input_target_files: Option<Vec<String>>) -> Result<MuxedLines> {
     let mut log_reader = MuxedLines::new()?;
 
@@ -74,42 +111,7 @@ fn set_regex(
     Ok((include_regex, exclude_regex))
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    let args = Args::parse();
-
-    let mut log_reader = set_target_file(args.target_files).await?;
-    let (include_regex, exclude_regex) = set_regex(
-        args.include_targets,
-        args.exclude_targets,
-        args.dont_use_preset_exclude_targets,
-    )?;
-
-    println!("target: {:#?}", log_reader);
-    println!("include: {:#?}", include_regex);
-    println!("exclude: {:#?}", exclude_regex);
-
-    while let Ok(Some(line)) = log_reader.next_line().await {
-        let line = line.line();
-
-        if let Some(ref e) = exclude_regex {
-            if e.is_match(line) {
-                continue;
-            };
-        };
-
-        if let Some(ref e) = include_regex {
-            if !e.is_match(line) {
-                continue;
-            };
-        };
-        color_println(line).await?;
-    }
-
-    Ok(())
-}
-
-pub async fn color_println(line: &str) -> Result<()> {
+async fn color_println(line: &str) -> Result<()> {
     let red_bold_regex = Regex::new(&RED_BOLD.join("|"))?;
     let line = red_bold_regex.replace_all(line, |caps: &regex::Captures| {
         let matched = &caps[0];
