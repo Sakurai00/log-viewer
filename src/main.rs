@@ -9,11 +9,11 @@ struct Args {
     #[arg(short, long, value_parser, num_args=1..)]
     target_files: Option<Vec<String>>,
     #[arg(short = 'd', long = "dont-use-preset-exclude")]
-    dont_use_preset_exclude: bool,
+    dont_use_preset_exclude_targets: bool,
     #[arg(short, long, value_parser, num_args=1..)]
-    exclude_string: Option<Vec<String>>,
+    exclude_targets: Option<Vec<String>>,
     #[arg(short, long, value_parser, num_args=1..)]
-    include_string: Option<Vec<String>>,
+    include_targets: Option<Vec<String>>,
 }
 
 const DEFAULT_EXCLUDE: [&str; 3] = ["aaa", "bbb", "ccc"];
@@ -36,40 +36,54 @@ async fn set_target_file(input_target_files: Option<Vec<String>>) -> Result<Muxe
     Ok(log_reader)
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    let args = Args::parse();
-
-    let mut log_reader = set_target_file(args.target_files).await?;
-
+fn set_regex(
+    input_include_targets: Option<Vec<String>>,
+    input_exclude_targets: Option<Vec<String>>,
+    dont_use_preset_exclude_targets: bool,
+) -> Result<(Option<Regex>, Option<Regex>)> {
     let default_exclude: Vec<String> = DEFAULT_EXCLUDE.iter().map(|&s| s.to_string()).collect();
+    let use_preset = !dont_use_preset_exclude_targets;
 
-    let include_regex: Option<Regex> = match args.include_string {
-        Some(x) => Some(Regex::new(&x.join("|"))?),
+    let include_regex: Option<Regex> = match input_include_targets {
+        Some(input) => Some(Regex::new(&input.join("|"))?),
         None => None,
     };
 
-    let exclude_regex: Option<Regex> = match args.exclude_string {
+    let exclude_regex: Option<Regex> = match input_exclude_targets {
         Some(input) => {
-            if args.dont_use_preset_exclude {
-                Some(Regex::new(&input.join("|"))?)
-            } else {
+            if use_preset {
                 let combined_exclude = vec![input, default_exclude]
                     .into_iter()
                     .flatten()
                     .collect::<Vec<String>>()
                     .join("|");
                 Some(Regex::new(&combined_exclude)?)
+            } else {
+                Some(Regex::new(&input.join("|"))?)
             }
         }
         None => {
-            if args.dont_use_preset_exclude {
-                None
-            } else {
+            if use_preset {
                 Some(Regex::new(&default_exclude.join("|"))?)
+            } else {
+                None
             }
         }
     };
+
+    Ok((include_regex, exclude_regex))
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let args = Args::parse();
+
+    let mut log_reader = set_target_file(args.target_files).await?;
+    let (include_regex, exclude_regex) = set_regex(
+        args.include_targets,
+        args.exclude_targets,
+        args.dont_use_preset_exclude_targets,
+    )?;
 
     println!("target: {:#?}", log_reader);
     println!("include: {:#?}", include_regex);
