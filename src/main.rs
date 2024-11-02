@@ -7,7 +7,7 @@ use regex::Regex;
 #[derive(Debug, Parser)]
 struct Args {
     #[arg(short, long, value_parser, num_args=1..)]
-    target_file: Option<Vec<String>>,
+    target_files: Option<Vec<String>>,
     #[arg(short = 'd', long = "dont-use-preset-exclude")]
     dont_use_preset_exclude: bool,
     #[arg(short, long, value_parser, num_args=1..)]
@@ -16,22 +16,28 @@ struct Args {
     include_string: Option<Vec<String>>,
 }
 
-#[tokio::main]
-pub async fn main() -> Result<()> {
-    let args = Args::parse();
+async fn set_target_file(input_target_files: Option<Vec<String>>) -> Result<MuxedLines> {
+    let mut log_reader = MuxedLines::new()?;
 
-
-    let mut logs = MuxedLines::new()?;
-    match args.target_file {
-        Some(targets) => {
-            for target in targets {
-                logs.add_file(&target).await?;
+    match input_target_files {
+        Some(target_files) => {
+            for file in target_files {
+                log_reader.add_file(&file).await?;
             }
         }
         None => {
-            logs.add_file("/var/log/messages").await?;
+            log_reader.add_file("/var/log/messages").await?;
         }
-    }
+    };
+
+    Ok(log_reader)
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let args = Args::parse();
+
+    let mut log_reader = set_target_file(args.target_files).await?;
 
     let default_exclude = ["aaa", "bbb", "ccc"];
     let default_exclude: Vec<String> = default_exclude.iter().map(|&s| s.to_string()).collect();
@@ -63,11 +69,11 @@ pub async fn main() -> Result<()> {
         }
     };
 
-    println!("target: {:#?}", logs);
+    println!("target: {:#?}", log_reader);
     println!("include: {:#?}", include_regex);
     println!("exclude: {:#?}", exclude_regex);
 
-    while let Ok(Some(line)) = logs.next_line().await {
+    while let Ok(Some(line)) = log_reader.next_line().await {
         let line = line.line();
 
         if let Some(ref e) = exclude_regex {
