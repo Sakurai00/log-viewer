@@ -8,8 +8,8 @@ use regex::Regex;
 struct Args {
     #[arg(short, long, value_parser, num_args=1..)]
     target_file: Option<Vec<String>>,
-    #[arg(short, long)]
-    dont_use_default_exclude: bool,
+    #[arg(short = 'd', long = "dont-use-preset-exclude")]
+    dont_use_preset_exclude: bool,
     #[arg(short, long, value_parser, num_args=1..)]
     exclude_string: Option<Vec<String>>,
     #[arg(short, long, value_parser, num_args=1..)]
@@ -19,6 +19,7 @@ struct Args {
 #[tokio::main]
 pub async fn main() -> Result<()> {
     let args = Args::parse();
+
 
     let mut logs = MuxedLines::new()?;
     match args.target_file {
@@ -42,7 +43,7 @@ pub async fn main() -> Result<()> {
 
     let exclude_regex: Option<Regex> = match args.exclude_string {
         Some(input) => {
-            if args.dont_use_default_exclude {
+            if args.dont_use_preset_exclude {
                 Some(Regex::new(&input.join("|"))?)
             } else {
                 let combined_exclude = vec![input, default_exclude]
@@ -54,7 +55,7 @@ pub async fn main() -> Result<()> {
             }
         }
         None => {
-            if args.dont_use_default_exclude {
+            if args.dont_use_preset_exclude {
                 None
             } else {
                 Some(Regex::new(&default_exclude.join("|"))?)
