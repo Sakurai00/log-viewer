@@ -16,6 +16,9 @@ struct Args {
     include_string: Option<Vec<String>>,
 }
 
+const DEFAULT_EXCLUDE: [&str; 3] = ["aaa", "bbb", "ccc"];
+const RED_BOLD: [&str; 2] = ["foo", "bar"];
+
 async fn set_target_file(input_target_files: Option<Vec<String>>) -> Result<MuxedLines> {
     let mut log_reader = MuxedLines::new()?;
 
@@ -39,8 +42,7 @@ async fn main() -> Result<()> {
 
     let mut log_reader = set_target_file(args.target_files).await?;
 
-    let default_exclude = ["aaa", "bbb", "ccc"];
-    let default_exclude: Vec<String> = default_exclude.iter().map(|&s| s.to_string()).collect();
+    let default_exclude: Vec<String> = DEFAULT_EXCLUDE.iter().map(|&s| s.to_string()).collect();
 
     let include_regex: Option<Regex> = match args.include_string {
         Some(x) => Some(Regex::new(&x.join("|"))?),
@@ -94,8 +96,7 @@ async fn main() -> Result<()> {
 }
 
 pub async fn color_println(line: &str) -> Result<()> {
-    let red_bold = ["foo", "bar"];
-    let red_bold_regex = Regex::new(&red_bold.join("|"))?;
+    let red_bold_regex = Regex::new(&RED_BOLD.join("|"))?;
     let line = red_bold_regex.replace_all(line, |caps: &regex::Captures| {
         let matched = &caps[0];
         matched.bright_red().bold().to_string()
