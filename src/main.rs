@@ -1,8 +1,9 @@
 use anyhow::Result;
 use clap::Parser;
-use colored::{self, Colorize};
+use colored::{self, Colorize, ColoredString};
 use linemux::MuxedLines;
 use regex::Regex;
+use std::borrow::Cow;
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -17,8 +18,47 @@ struct Args {
 }
 
 const DEFAULT_EXCLUDE: [&str; 3] = ["aaa", "bbb", "ccc"];
-const RED_BOLD: [&str; 2] = ["foo", "bar"];
 
+enum Color {
+    Red,
+    BrightRed,
+    Green,
+    Yellow,
+    Blue,
+}
+
+enum Style {
+    Bold,
+    Italic,
+    Underline,
+    Normal,
+}
+
+struct HighlightRule {
+    keywords: Vec<String>,
+    color: Color,
+    style: Style,
+}
+
+fn get_highlight_rules() -> Vec<HighlightRule> {
+    vec![
+        HighlightRule {
+            keywords: vec!["foo".to_string(), "bar".to_string()],
+            color: Color::BrightRed,
+            style: Style::Bold,
+        },
+        HighlightRule {
+            keywords: vec!["info".to_string(), "success".to_string()],
+            color: Color::Green,
+            style: Style::Normal,
+        },
+        HighlightRule {
+            keywords: vec!["warning".to_string()],
+            color: Color::Yellow,
+            style: Style::Underline,
+        },
+    ]
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -30,6 +70,7 @@ async fn main() -> Result<()> {
         args.exclude_targets,
         args.dont_use_preset_exclude_targets,
     )?;
+    let highlight_rules = get_highlight_rules();
 
     println!("target: {:#?}", log_reader);
     println!("include: {:#?}", include_regex);
@@ -49,12 +90,11 @@ async fn main() -> Result<()> {
                 continue;
             };
         };
-        color_println(line).await?;
+        color_println(line, &highlight_rules).await?;
     }
 
     Ok(())
 }
-
 
 async fn set_target_file(input_target_files: Option<Vec<String>>) -> Result<MuxedLines> {
     let mut log_reader = MuxedLines::new()?;
@@ -111,13 +151,36 @@ fn set_regex(
     Ok((include_regex, exclude_regex))
 }
 
-async fn color_println(line: &str) -> Result<()> {
-    let red_bold_regex = Regex::new(&RED_BOLD.join("|"))?;
-    let line = red_bold_regex.replace_all(line, |caps: &regex::Captures| {
-        let matched = &caps[0];
-        matched.bright_red().bold().to_string()
-    });
+async fn color_println(line: &str, rules: &[HighlightRule]) -> Result<()> {
+    let mut processed_line: Cow<str> = Cow::Borrowed(line);
 
-    println!("{}", line);
+    for rule in rules {
+        let pattern = rule.keywords.join("|");
+        let re = Regex::new(&pattern)?;
+
+        processed_line = Cow::Owned(re.replace_all(&processed_line, |caps: &regex::Captures| {
+            let matched = &caps[0];
+            apply_style(matched, &rule.color, &rule.style).to_string()
+        }).into_owned());
+    }
+
+    println!("{}", processed_line);
     Ok(())
+}
+
+fn apply_style(text: &str, color: &Color, style: &Style) -> ColoredString {
+    let colored_text = match color {
+        Color::Red => text.red(),
+        Color::BrightRed => text.bright_red(),
+        Color::Green => text.green(),
+        Color::Yellow => text.yellow(),
+        Color::Blue => text.blue(),
+    };
+
+    match style {
+        Style::Bold => colored_text.bold(),
+        Style::Italic => colored_text.italic(),
+        Style::Underline => colored_text.underline(),
+        Style::Normal => colored_text,
+    }
 }
