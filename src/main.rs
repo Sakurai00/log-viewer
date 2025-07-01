@@ -17,7 +17,12 @@ struct Args {
     include_targets: Option<Vec<String>>,
 }
 
-const DEFAULT_EXCLUDE: [&str; 3] = ["aaa", "bbb", "ccc"];
+const DEFAULT_EXCLUDE: &[&str] = &["aaa", "bbb", "ccc"];
+
+// Highlight keyword definitions
+const KEYWORDS_CRITICAL: &[&str] = &["foo", "bar"];
+const KEYWORDS_INFO: &[&str] = &["info", "success"];
+const KEYWORDS_WARN: &[&str] = &["warning"];
 
 enum Color {
     Red,
@@ -43,17 +48,17 @@ struct HighlightRule {
 fn get_highlight_rules() -> Vec<HighlightRule> {
     vec![
         HighlightRule {
-            keywords: vec!["foo".to_string(), "bar".to_string()],
+            keywords: KEYWORDS_CRITICAL.iter().map(|&s| s.to_string()).collect(),
             color: Color::BrightRed,
             style: Style::Bold,
         },
         HighlightRule {
-            keywords: vec!["info".to_string(), "success".to_string()],
+            keywords: KEYWORDS_INFO.iter().map(|&s| s.to_string()).collect(),
             color: Color::Green,
             style: Style::Normal,
         },
         HighlightRule {
-            keywords: vec!["warning".to_string()],
+            keywords: KEYWORDS_WARN.iter().map(|&s| s.to_string()).collect(),
             color: Color::Yellow,
             style: Style::Underline,
         },
