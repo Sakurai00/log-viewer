@@ -95,7 +95,8 @@ async fn main() -> Result<()> {
                 continue;
             };
         };
-        color_println(line, &highlight_rules).await?;
+        let highlighted_line = apply_highlighting(line, &highlight_rules)?;
+        println!("{}", highlighted_line);
     }
 
     Ok(())
@@ -156,21 +157,25 @@ fn set_regex(
     Ok((include_regex, exclude_regex))
 }
 
-async fn color_println(line: &str, rules: &[HighlightRule]) -> Result<()> {
+fn apply_highlighting<'a>(
+    line: &'a str,
+    rules: &[HighlightRule],
+) -> Result<Cow<'a, str>> {
     let mut processed_line: Cow<str> = Cow::Borrowed(line);
 
     for rule in rules {
         let pattern = rule.keywords.join("|");
         let re = Regex::new(&pattern)?;
 
-        processed_line = Cow::Owned(re.replace_all(&processed_line, |caps: &regex::Captures| {
-            let matched = &caps[0];
-            apply_style(matched, &rule.color, &rule.style).to_string()
-        }).into_owned());
+        if re.is_match(&processed_line) {
+            processed_line = Cow::Owned(re.replace_all(&processed_line, |caps: &regex::Captures| {
+                let matched = &caps[0];
+                apply_style(matched, &rule.color, &rule.style).to_string()
+            }).into_owned());
+        }
     }
 
-    println!("{}", processed_line);
-    Ok(())
+    Ok(processed_line)
 }
 
 fn apply_style(text: &str, color: &Color, style: &Style) -> ColoredString {
