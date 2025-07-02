@@ -14,7 +14,9 @@ struct Args {
     #[arg(short, long, value_parser, num_args=1..)]
     exclude_patterns: Option<Vec<String>>,
     #[arg(short, long, value_parser, num_args=1..)]
-    include_patterns: Option<Vec<String>>,
+    include_words: Option<Vec<String>>,
+    #[arg(long)]
+    debug: bool,
 }
 
 const PRESET_EXCLUDE_PATTERNS: &[&str] = &["aaa", "bbb", "ccc"];
@@ -77,9 +79,9 @@ async fn main() -> Result<()> {
     )?;
     let highlight_rules = get_highlight_rules()?;
 
-    println!("target: {:#?}", log_reader);
-    println!("include: {:#?}", include_regex);
-    println!("exclude: {:#?}", exclude_regex);
+    if args.debug {
+        print_debug_info(&args.log_files, &include_regex, &exclude_regex);
+    }
 
     while let Ok(Some(line)) = log_reader.next_line().await {
         let line = line.line();
@@ -155,6 +157,42 @@ fn set_regex(
     };
 
     Ok((include_regex, exclude_regex))
+}
+
+fn print_debug_info(
+    log_files: &Option<Vec<String>>,
+    include_regex: &Option<Regex>,
+    exclude_regex: &Option<Regex>,
+) {
+    println!();
+    println!("{}", "=".repeat(40).cyan());
+    println!("{}", "  DEBUG INFO".bold().cyan());
+    println!("{}", "=".repeat(40).cyan());
+
+    // Log files
+    match log_files {
+        Some(files) => println!(
+            "{}: {}",
+            "Log files".bold(),
+            files.join(", ")
+        ),
+        None => println!("{}: {}", "Log files".bold(), "/var/log/messages"),
+    }
+
+    // Include regex
+    match include_regex {
+        Some(regex) => println!("{}: {}", "Include Regex".bold(), regex.to_string()),
+        None => println!("{}: {}", "Include Regex".bold(), "None"),
+    }
+
+    // Exclude regex
+    match exclude_regex {
+        Some(regex) => println!("{}: {}", "Exclude Regex".bold(), regex.to_string()),
+        None => println!("{}: {}", "Exclude Regex".bold(), "None"),
+    }
+
+    println!("{}", "=".repeat(40).cyan());
+    println!();
 }
 
 fn apply_highlighting<'a>(
