@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use colored::{self, Colorize, ColoredString};
+use colored::{self, ColoredString, Colorize};
 use linemux::MuxedLines;
 use regex::Regex;
 use std::borrow::Cow;
@@ -97,7 +97,10 @@ fn build_filter_regexes(
     exclude_words: Option<Vec<String>>,
     disable_preset_excludes: bool,
 ) -> Result<(Option<Regex>, Option<Regex>)> {
-    let default_exclude_patterns: Vec<String> = PRESET_EXCLUDE_WORDS.iter().map(|&s| s.to_string()).collect();
+    let default_exclude_patterns: Vec<String> = PRESET_EXCLUDE_WORDS
+        .iter()
+        .map(|&s| s.to_string())
+        .collect();
     let use_preset_excludes = !disable_preset_excludes;
 
     let include_regex: Option<Regex> = match include_words {
@@ -163,11 +166,7 @@ fn print_debug_info(
 
     // Log files
     match log_files {
-        Some(files) => println!(
-            "{}: {}",
-            "Log files".bold(),
-            files.join(", ")
-        ),
+        Some(files) => println!("{}: {}", "Log files".bold(), files.join(", ")),
         None => println!("{}: /var/log/messages", "Log files".bold()),
     }
 
@@ -201,25 +200,23 @@ fn should_display_line(
     passes_exclusion_filter && passes_inclusion_filter
 }
 
-fn apply_highlighting<'a>(
-    line: &'a str,
-    highlight_rules: &[HighlightRule],
-) -> Cow<'a, str> {
-    let mut processed_line: Cow<'a, str> = Cow::Borrowed(line);
+fn apply_highlighting<'a>(line: &'a str, rules: &[HighlightRule]) -> Cow<'a, str> {
+    let mut line: Cow<'a, str> = Cow::Borrowed(line);
 
-    for rule in highlight_rules {
-        if rule.regex.is_match(&processed_line) {
-            processed_line = Cow::Owned(
-                rule.regex.replace_all(&processed_line, |caps: &regex::Captures| {
-                    let matched = &caps[0];
-                    apply_style(matched, &rule.color, &rule.style).to_string()
-                })
-                .into_owned(),
+    for rule in rules {
+        if rule.regex.is_match(&line) {
+            line = Cow::Owned(
+                rule.regex
+                    .replace_all(&line, |caps: &regex::Captures| {
+                        let matched = &caps[0];
+                        apply_style(matched, &rule.color, &rule.style).to_string()
+                    })
+                    .into_owned(),
             );
         }
     }
 
-    processed_line
+    line
 }
 
 fn apply_style(text: &str, text_color: &Color, text_style: &Style) -> ColoredString {
