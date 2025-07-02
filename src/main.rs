@@ -86,19 +86,10 @@ async fn main() -> Result<()> {
     while let Ok(Some(line)) = log_reader.next_line().await {
         let line = line.line();
 
-        if let Some(ref e) = exclude_regex {
-            if e.is_match(line) {
-                continue;
-            };
-        };
-
-        if let Some(ref e) = include_regex {
-            if !e.is_match(line) {
-                continue;
-            };
-        };
+        if should_display_line(line, &include_regex, &exclude_regex) {
         let highlighted_line = apply_highlighting(line, &highlight_rules);
         println!("{}", highlighted_line);
+        }
     }
 
     Ok(())
@@ -193,6 +184,20 @@ fn print_debug_info(
 
     println!("{}", "=".repeat(40).cyan());
     println!();
+}
+
+fn should_display_line(
+    line: &str,
+    include_regex: &Option<Regex>,
+    exclude_regex: &Option<Regex>,
+) -> bool {
+    // 除外フィルター: 除外ルールがないか、除外ルールに含まれない場合は表示。除外ルールに含まれる場合は表示させない。
+    let passes_exclusion_filter = exclude_regex.as_ref().is_none_or(|re| !re.is_match(line));
+    // 包含フィルター: 包含ルールがないか、包含ルールに含まれる場合は表示。包含ルールに含まれない場合は表示させない。
+    let passes_inclusion_filter = include_regex.as_ref().is_none_or(|re| re.is_match(line));
+
+    // 両方のフィルターを通過した場合のみ表示する
+    passes_exclusion_filter && passes_inclusion_filter
 }
 
 fn apply_highlighting<'a>(
