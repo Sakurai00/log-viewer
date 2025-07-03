@@ -182,16 +182,14 @@ fn apply_highlighting<'a>(line: &'a str, rules: &[HighlightRule]) -> Cow<'a, str
     let mut line: Cow<'a, str> = Cow::Borrowed(line);
 
     for rule in rules {
-        if rule.regex.is_match(&line) {
-            line = Cow::Owned(
-                rule.regex
-                    .replace_all(&line, |caps: &regex::Captures| {
-                        let matched = &caps[0];
-                        apply_style(matched, &rule.color, &rule.style).to_string()
-                    })
-                    .into_owned(),
-            );
-        }
+        line = Cow::Owned(
+            rule.regex
+                .replace_all(&line, |caps: &regex::Captures| {
+                    let matched_word = &caps[0];
+                    apply_style(matched_word, &rule.color, &rule.style).to_string()
+                })
+                .into_owned(),
+        );
     }
 
     line
