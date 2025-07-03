@@ -5,6 +5,8 @@ use linemux::MuxedLines;
 use regex::Regex;
 use std::borrow::Cow;
 
+mod debug;
+
 #[derive(Debug, Parser)]
 struct Args {
     #[arg(short, long, value_parser, num_args=1..)]
@@ -61,7 +63,12 @@ async fn main() -> Result<()> {
     let highlight_rules = get_highlight_rules()?;
 
     if args.debug {
-        print_debug_info(&args.log_files, &include_regex, &exclude_regex);
+        debug::print_debug_info(
+            &args.log_files,
+            &include_regex,
+            &exclude_regex,
+            DEFAULT_LOG_FILES,
+        );
     }
 
     while let Ok(Some(line)) = log_reader.next_line().await {
@@ -155,42 +162,6 @@ fn get_highlight_rules() -> Result<Vec<HighlightRule>> {
         },
     ];
     Ok(rules)
-}
-
-fn print_debug_info(
-    log_files: &Option<Vec<String>>,
-    include_regex: &Option<Regex>,
-    exclude_regex: &Option<Regex>,
-) {
-    println!();
-    println!("{}", "=".repeat(40).cyan());
-    println!("{}", "  DEBUG INFO".bold().cyan());
-    println!("{}", "=".repeat(40).cyan());
-
-    // Log files
-    match log_files {
-        Some(files) => println!("{}: {}", "Log files".bold(), files.join(", ")),
-        None => println!(
-            "{}: {}",
-            "Log files".bold(),
-            DEFAULT_LOG_FILES.join(", ")
-        ),
-    }
-
-    // Include regex
-    match include_regex {
-        Some(regex) => println!("{}: {}", "Include Regex".bold(), regex.to_string()),
-        None => println!("{}: None", "Include Regex".bold()),
-    }
-
-    // Exclude regex
-    match exclude_regex {
-        Some(regex) => println!("{}: {}", "Exclude Regex".bold(), regex.to_string()),
-        None => println!("{}: None", "Exclude Regex".bold()),
-    }
-
-    println!("{}", "=".repeat(40).cyan());
-    println!();
 }
 
 fn should_display_line(
