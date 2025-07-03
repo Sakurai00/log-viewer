@@ -20,6 +20,7 @@ struct Args {
 }
 
 const PRESET_EXCLUDE_WORDS: &[&str] = &["aaa", "bbb", "ccc"];
+const DEFAULT_LOG_FILES: &[&str] = &["/var/log/messages"];
 
 // Highlight keyword definitions
 const CRITICAL_WORDS: &[&str] = &["foo", "bar"];
@@ -85,7 +86,9 @@ async fn get_log_reader(log_files: &Option<Vec<String>>) -> Result<MuxedLines> {
             }
         }
         None => {
-            log_reader.add_file("/var/log/messages").await?;
+            for file in DEFAULT_LOG_FILES {
+                log_reader.add_file(file).await?;
+            }
         }
     };
 
@@ -167,7 +170,11 @@ fn print_debug_info(
     // Log files
     match log_files {
         Some(files) => println!("{}: {}", "Log files".bold(), files.join(", ")),
-        None => println!("{}: /var/log/messages", "Log files".bold()),
+        None => println!(
+            "{}: {}",
+            "Log files".bold(),
+            DEFAULT_LOG_FILES.join(", ")
+        ),
     }
 
     // Include regex
