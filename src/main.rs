@@ -56,20 +56,13 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     let mut log_reader = get_log_reader(&args.log_files).await?;
-    let (include_regex, exclude_regex) = build_filter_regexes(
-        args.include_words,
-        args.exclude_words,
-        args.disable_preset_excludes,
-    )?;
+
+    let include_regex = build_include_regex(args.include_words)?;
+    let exclude_regex = build_exclude_regex(args.exclude_words, args.disable_preset_excludes)?;
     let highlight_rules = get_highlight_rules()?;
 
     if args.debug {
-        debug::print_debug_info(
-            &args.log_files,
-            &include_regex,
-            &exclude_regex,
-            DEFAULT_LOG_FILES,
-        );
+        debug::print_debug_info(&args.log_files, &include_regex, &exclude_regex, DEFAULT_LOG_FILES);
     }
 
     while let Ok(Some(line)) = log_reader.next_line().await {
@@ -103,45 +96,38 @@ async fn get_log_reader(log_files: &Option<Vec<String>>) -> Result<MuxedLines> {
     Ok(log_reader)
 }
 
-fn build_filter_regexes(
-    include_words: Option<Vec<String>>,
-    exclude_words: Option<Vec<String>>,
-    disable_preset_excludes: bool,
-) -> Result<(Option<Regex>, Option<Regex>)> {
-    let default_exclude_patterns: Vec<String> = PRESET_EXCLUDE_WORDS
-        .iter()
-        .map(|&s| s.to_string())
+fn build_include_regex(words: Option<Vec<String>>) -> Result<Option<Regex>> {
+    let patterns: Vec<String> = words
+        .into_iter()
+        .flatten()
+        .map(|word| regex::escape(&word))
         .collect();
-    let use_preset_excludes = !disable_preset_excludes;
 
-    let include_regex: Option<Regex> = match include_words {
-        Some(words) => Some(Regex::new(&words.join("|"))?),
-        None => None,
-    };
+    if patterns.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(Regex::new(&patterns.join("|"))?))
+    }
+}
 
-    let exclude_regex: Option<Regex> = match exclude_words {
-        Some(words) => {
-            if use_preset_excludes {
-                let combined_pattern_str = vec![words, default_exclude_patterns]
-                    .into_iter()
-                    .flatten()
-                    .collect::<Vec<String>>()
-                    .join("|");
-                Some(Regex::new(&combined_pattern_str)?)
-            } else {
-                Some(Regex::new(&words.join("|"))?)
-            }
-        }
-        None => {
-            if use_preset_excludes {
-                Some(Regex::new(&default_exclude_patterns.join("|"))?)
-            } else {
-                None
-            }
-        }
-    };
+fn build_exclude_regex(words: Option<Vec<String>>, disable_preset_excludes: bool) -> Result<Option<Regex>> {
+    let user_words = words.into_iter().flatten();
 
-    Ok((include_regex, exclude_regex))
+    let preset_words = (!disable_preset_excludes)
+        .then_some(PRESET_EXCLUDE_WORDS.iter().map(|&s| s.to_string()))
+        .into_iter()
+        .flatten();
+
+    let patterns: Vec<String> = user_words
+        .chain(preset_words)
+        .map(|word| regex::escape(&word))
+        .collect();
+
+    if patterns.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(Regex::new(&patterns.join("|"))?))
+    }
 }
 
 fn get_highlight_rules() -> Result<Vec<HighlightRule>> {
@@ -165,11 +151,7 @@ fn get_highlight_rules() -> Result<Vec<HighlightRule>> {
     Ok(rules)
 }
 
-fn should_display_line(
-    line: &str,
-    include_regex: &Option<Regex>,
-    exclude_regex: &Option<Regex>,
-) -> bool {
+fn should_display_line(line: &str, include_regex: &Option<Regex>, exclude_regex: &Option<Regex>) -> bool {
     // 除外フィルター: 除外ルールがないか、除外ルールに含まれない場合は表示。除外ルールに含まれる場合は表示させない。
     let passes_exclusion_filter = exclude_regex.as_ref().is_none_or(|re| !re.is_match(line));
     // 包含フィルター: 包含ルールがないか、包含ルールに含まれる場合は表示。包含ルールに含まれない場合は表示させない。

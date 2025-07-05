@@ -15,11 +15,7 @@ pub fn print_debug_info(
     // Log files
     match log_files {
         Some(files) => println!("{}: {}", "Log files".bold(), files.join(", ")),
-        None => println!(
-            "{}: {}",
-            "Log files".bold(),
-            default_log_files.join(", ")
-        ),
+        None => println!("{}: {}", "Log files".bold(), default_log_files.join(", ")),
     }
 
     // Include regex
