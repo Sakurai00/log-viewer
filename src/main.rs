@@ -35,6 +35,7 @@ enum Color {
     Green,
     Yellow,
     Blue,
+    Cyan,
 }
 
 enum Style {
@@ -76,7 +77,7 @@ async fn main() -> Result<()> {
 
         if should_display_line(line, &include_regex, &exclude_regex) {
             let highlighted_line = apply_highlighting(line, &highlight_rules);
-            println!("{}", highlighted_line);
+            println!("{highlighted_line}");
         }
     }
 
@@ -151,14 +152,14 @@ fn get_highlight_rules() -> Result<Vec<HighlightRule>> {
             style: Style::Bold,
         },
         HighlightRule {
-            regex: Regex::new(&INFO_WORDS.join("|"))?,
-            color: Color::Green,
-            style: Style::Normal,
-        },
-        HighlightRule {
             regex: Regex::new(&WARN_WORDS.join("|"))?,
             color: Color::Yellow,
             style: Style::Underline,
+        },
+        HighlightRule {
+            regex: Regex::new(&INFO_WORDS.join("|"))?,
+            color: Color::Cyan,
+            style: Style::Normal,
         },
     ];
     Ok(rules)
@@ -202,6 +203,7 @@ fn apply_style(text: &str, text_color: &Color, text_style: &Style) -> ColoredStr
         Color::Green => text.green(),
         Color::Yellow => text.yellow(),
         Color::Blue => text.blue(),
+        Color::Cyan => text.cyan(),
     };
 
     let styled_text: ColoredString = match text_style {
