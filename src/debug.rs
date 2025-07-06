@@ -20,13 +20,13 @@ pub fn print_debug_info(
 
     // Include regex
     match include_regex {
-        Some(regex) => println!("{}: {}", "Include Regex".bold(), regex.to_string()),
+        Some(regex) => println!("{}: {}", "Include Regex".bold(), regex),
         None => println!("{}: None", "Include Regex".bold()),
     }
 
     // Exclude regex
     match exclude_regex {
-        Some(regex) => println!("{}: {}", "Exclude Regex".bold(), regex.to_string()),
+        Some(regex) => println!("{}: {}", "Exclude Regex".bold(), regex),
         None => println!("{}: None", "Exclude Regex".bold()),
     }
 

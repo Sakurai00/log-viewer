@@ -1,10 +1,11 @@
 use anyhow::Result;
-use colored::{self, Colorize, ColoredString};
+use colored::{self, ColoredString, Colorize};
 use regex::Regex;
 use std::borrow::Cow;
 
 use crate::{CRITICAL_WORDS, INFO_WORDS, WARN_WORDS};
 
+#[allow(dead_code)]
 pub enum Color {
     Red,
     BrightRed,
@@ -14,6 +15,7 @@ pub enum Color {
     Cyan,
 }
 
+#[allow(dead_code)]
 pub enum Style {
     Bold,
     Italic,
