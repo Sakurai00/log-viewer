@@ -1,6 +1,7 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use linemux::MuxedLines;
+use std::process;
 
 mod cli;
 mod debug;
@@ -20,7 +21,14 @@ const INFO_WORDS: &[&str] = &["info", "success"];
 const WARN_WORDS: &[&str] = &["warning"];
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() {
+    if let Err(e) = run().await {
+        eprintln!("Error: {e:?}");
+        process::exit(1);
+    }
+}
+
+async fn run() -> Result<()> {
     let args = Args::parse();
 
     let mut log_reader = get_log_reader(&args.log_files).await?;
@@ -48,18 +56,17 @@ async fn main() -> Result<()> {
 async fn get_log_reader(log_files: &Option<Vec<String>>) -> Result<MuxedLines> {
     let mut log_reader = MuxedLines::new()?;
 
-    match log_files {
-        Some(log_files) => {
-            for file in log_files {
-                log_reader.add_file(file).await?;
-            }
-        }
-        None => {
-            for file in DEFAULT_LOG_FILES {
-                log_reader.add_file(file).await?;
-            }
-        }
+    let log_lifes = match log_files {
+        Some(log_files) => log_files.clone(),
+        None => DEFAULT_LOG_FILES.iter().map(|s| s.to_string()).collect(),
     };
+
+    for file in &log_lifes {
+        log_reader
+            .add_file(file)
+            .await
+            .with_context(|| format!("Failed to read file: {file}"))?;
+    }
 
     Ok(log_reader)
 }
