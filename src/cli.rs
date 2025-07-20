@@ -12,4 +12,6 @@ pub struct Args {
     pub include_words: Option<Vec<String>>,
     #[arg(long)]
     pub debug: bool,
+    #[arg(long)]
+    pub cat: bool,
 }

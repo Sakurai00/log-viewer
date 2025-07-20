@@ -1,7 +1,7 @@
 use anyhow::Result;
 use regex::Regex;
 
-use crate::PRESET_EXCLUDE_WORDS;
+use crate::constants::PRESET_EXCLUDE_WORDS;
 
 pub fn build_include_regex(words: Option<Vec<String>>) -> Result<Option<Regex>> {
     let patterns: Vec<String> = words
@@ -17,10 +17,7 @@ pub fn build_include_regex(words: Option<Vec<String>>) -> Result<Option<Regex>> 
     }
 }
 
-pub fn build_exclude_regex(
-    words: Option<Vec<String>>,
-    disable_preset_excludes: bool,
-) -> Result<Option<Regex>> {
+pub fn build_exclude_regex(words: Option<Vec<String>>, disable_preset_excludes: bool) -> Result<Option<Regex>> {
     let user_words = words.into_iter().flatten();
 
     let preset_words = (!disable_preset_excludes)
@@ -40,11 +37,7 @@ pub fn build_exclude_regex(
     }
 }
 
-pub fn should_display_line(
-    line: &str,
-    include_regex: &Option<Regex>,
-    exclude_regex: &Option<Regex>,
-) -> bool {
+pub fn should_display_line(line: &str, include_regex: &Option<Regex>, exclude_regex: &Option<Regex>) -> bool {
     let passes_exclusion_filter = exclude_regex.as_ref().is_none_or(|re| !re.is_match(line));
     let passes_inclusion_filter = include_regex.as_ref().is_none_or(|re| re.is_match(line));
 
