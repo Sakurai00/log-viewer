@@ -7,12 +7,10 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 
 mod cli;
 mod debug;
-mod filtering;
 mod formatter;
-mod highlighting;
 
 use cli::Args;
-use formatter::LineFormatter;
+use formatter::lineformatter::LineFormatter;
 
 const PRESET_EXCLUDE_WORDS: &[&str] = &["aaa", "bbb", "ccc"];
 const DEFAULT_LOG_FILES: &[&str] = &["/var/log/messages"];
