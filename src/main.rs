@@ -56,12 +56,12 @@ async fn run() -> Result<()> {
 async fn get_log_reader(log_files: &Option<Vec<String>>) -> Result<MuxedLines> {
     let mut log_reader = MuxedLines::new()?;
 
-    let log_lifes = match log_files {
+    let log_files = match log_files {
         Some(log_files) => log_files.clone(),
         None => DEFAULT_LOG_FILES.iter().map(|s| s.to_string()).collect(),
     };
 
-    for file in &log_lifes {
+    for file in &log_files {
         log_reader
             .add_file(file)
             .await
