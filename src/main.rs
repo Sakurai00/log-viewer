@@ -6,19 +6,12 @@ use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 mod cli;
+mod constants;
 mod debug;
 mod formatter;
 
 use cli::Args;
 use formatter::lineformatter::LineFormatter;
-
-const PRESET_EXCLUDE_WORDS: &[&str] = &["aaa", "bbb", "ccc"];
-const DEFAULT_LOG_FILES: &[&str] = &["/var/log/messages"];
-
-// Highlight keyword definitions
-const CRITICAL_WORDS: &[&str] = &["foo", "bar"];
-const INFO_WORDS: &[&str] = &["info", "success"];
-const WARN_WORDS: &[&str] = &["warning"];
 
 #[tokio::main]
 async fn main() {
@@ -33,9 +26,12 @@ async fn run() -> Result<()> {
 
     let formatter = LineFormatter::new(args.include_words, args.exclude_words, args.disable_preset_excludes)?;
 
-    let log_files = args
-        .log_files
-        .unwrap_or_else(|| DEFAULT_LOG_FILES.iter().map(|s| s.to_string()).collect());
+    let log_files = args.log_files.unwrap_or_else(|| {
+        constants::DEFAULT_LOG_FILES
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
+    });
 
     if args.debug {
         debug::print_debug_info(&log_files, formatter.get_include_regex(), formatter.get_exclude_regex());

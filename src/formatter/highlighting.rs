@@ -3,9 +3,7 @@ use colored::{self, ColoredString, Colorize};
 use regex::Regex;
 use std::borrow::Cow;
 
-use crate::CRITICAL_WORDS;
-use crate::INFO_WORDS;
-use crate::WARN_WORDS;
+use crate::constants::{CRITICAL_WORDS, INFO_WORDS, WARN_WORDS};
 
 #[allow(dead_code)]
 pub enum Color {

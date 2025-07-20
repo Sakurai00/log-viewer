@@ -1,7 +1,7 @@
 use anyhow::Result;
 use regex::Regex;
 
-use crate::PRESET_EXCLUDE_WORDS;
+use crate::constants::PRESET_EXCLUDE_WORDS;
 
 pub fn build_include_regex(words: Option<Vec<String>>) -> Result<Option<Regex>> {
     let patterns: Vec<String> = words
