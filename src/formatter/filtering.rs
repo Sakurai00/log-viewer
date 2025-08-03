@@ -4,37 +4,26 @@ use regex::Regex;
 use crate::constants::PRESET_EXCLUDE_WORDS;
 
 pub fn build_include_regex(words: Option<Vec<String>>) -> Result<Option<Regex>> {
-    let patterns: Vec<String> = words
-        .into_iter()
-        .flatten()
-        .map(|word| regex::escape(&word))
-        .collect();
-
-    if patterns.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(Regex::new(&patterns.join("|"))?))
-    }
+    let word_list: Vec<String> = words.into_iter().flatten().collect();
+    compile_words_to_regex(&word_list)
 }
 
 pub fn build_exclude_regex(words: Option<Vec<String>>, disable_preset_excludes: bool) -> Result<Option<Regex>> {
-    let user_words = words.into_iter().flatten();
+    let mut word_list = words.unwrap_or_default();
 
-    let preset_words = (!disable_preset_excludes)
-        .then_some(PRESET_EXCLUDE_WORDS.iter().map(|&s| s.to_string()))
-        .into_iter()
-        .flatten();
-
-    let all_patterns: Vec<String> = user_words
-        .chain(preset_words)
-        .map(|word| regex::escape(&word))
-        .collect();
-
-    if all_patterns.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(Regex::new(&all_patterns.join("|"))?))
+    if !disable_preset_excludes {
+        word_list.extend(PRESET_EXCLUDE_WORDS.iter().map(|&s| s.to_string()));
     }
+
+    compile_words_to_regex(&word_list)
+}
+
+fn compile_words_to_regex(words: &[String]) -> Result<Option<Regex>> {
+    if words.is_empty() {
+        return Ok(None);
+    }
+    let patterns: Vec<String> = words.iter().map(|word| regex::escape(word)).collect();
+    Ok(Some(Regex::new(&patterns.join("|"))?))
 }
 
 pub fn should_display_line(line: &str, include_regex: &Option<Regex>, exclude_regex: &Option<Regex>) -> bool {
