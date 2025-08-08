@@ -47,9 +47,9 @@ mod tests {
             "exception".to_string(),
         ]);
         let regex = build_include_regex(words).unwrap().unwrap();
-        assert_eq!(regex.is_match("this is a critical error"), true);
-        assert_eq!(regex.is_match("a fatal exception occurred"), true);
-        assert_eq!(regex.is_match("this is just info"), false);
+        assert!(regex.is_match("this is a critical error"));
+        assert!(regex.is_match("a fatal exception occurred"));
+        assert!(!regex.is_match("this is just info"));
     }
 
     #[test]
@@ -62,12 +62,12 @@ mod tests {
             "temp".to_string(),
         ]);
         let regex = build_exclude_regex(words, false).unwrap().unwrap();
-        assert_eq!(regex.is_match("this is a debug message"), true);
-        assert_eq!(regex.is_match("filter out this spam"), true);
-        assert_eq!(regex.is_match("verbose logging enabled"), true);
+        assert!(regex.is_match("this is a debug message"));
+        assert!(regex.is_match("filter out this spam"));
+        assert!(regex.is_match("verbose logging enabled"));
         // Assuming "aaa" is a preset exclude word
-        assert_eq!(regex.is_match("this is an aaa message"), true);
-        assert_eq!(regex.is_match("this is a regular message"), false);
+        assert!(regex.is_match("this is an aaa message"));
+        assert!(!regex.is_match("this is a regular message"));
     }
 
     #[test]
@@ -76,24 +76,24 @@ mod tests {
         let exclude_regex = build_exclude_regex(Some(vec!["temp".to_string(), "interim".to_string()]), false).unwrap();
 
         // Matches include, not exclude -> should display
-        assert_eq!(should_display_line(
+        assert!(should_display_line(
             "operation was a success",
             &include_regex,
             &exclude_regex
-        ), true);
+        ));
         // Doesn't match include -> should not display
-        assert_eq!(should_display_line("operation failed", &include_regex, &exclude_regex), false);
+        assert!(!should_display_line("operation failed", &include_regex, &exclude_regex));
         // Matches both include and exclude -> should not display
-        assert_eq!(should_display_line(
+        assert!(!should_display_line(
             "interim success report",
             &include_regex,
             &exclude_regex
-        ), false);
+        ));
         // No include regex, but matches exclude -> should not display
-        assert_eq!(should_display_line("this is a temp file", &None, &exclude_regex), false);
+        assert!(!should_display_line("this is a temp file", &None, &exclude_regex));
         // No exclude regex, but matches include -> should display
-        assert_eq!(should_display_line("request approved", &include_regex, &None), true);
+        assert!(should_display_line("request approved", &include_regex, &None));
         // No rules -> should display
-        assert_eq!(should_display_line("any other message", &None, &None), true);
+        assert!(should_display_line("any other message", &None, &None));
     }
 }
