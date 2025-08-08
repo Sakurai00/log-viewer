@@ -26,12 +26,7 @@ async fn run() -> Result<()> {
 
     let formatter = LineFormatter::new(args.include_words, args.exclude_words, args.disable_preset_excludes)?;
 
-    let log_files = args.log_files.unwrap_or_else(|| {
-        constants::DEFAULT_LOG_FILES
-            .iter()
-            .map(|s| s.to_string())
-            .collect()
-    });
+    let log_files = args.log_files;
 
     if args.debug {
         debug::print_debug_info(&log_files, formatter.get_include_regex(), formatter.get_exclude_regex());
