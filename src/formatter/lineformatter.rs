@@ -40,3 +40,100 @@ impl LineFormatter {
         &self.exclude_regex
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use colored::Colorize;
+
+    #[test]
+    fn test_line_formatter_new_default() {
+        let formatter = LineFormatter::new(None, None, false).unwrap();
+        assert!(formatter.get_include_regex().is_none());
+        assert!(formatter.get_exclude_regex().is_some());
+    }
+
+    #[test]
+    fn test_line_formatter_new_with_includes() {
+        let formatter = LineFormatter::new(Some(vec!["include".to_string()]), None, false).unwrap();
+        assert!(formatter.get_include_regex().is_some());
+        assert!(formatter.get_exclude_regex().is_some());
+    }
+
+    #[test]
+    fn test_line_formatter_new_with_excludes() {
+        let formatter = LineFormatter::new(None, Some(vec!["exclude".to_string()]), false).unwrap();
+        assert!(formatter.get_include_regex().is_none());
+        assert!(formatter.get_exclude_regex().is_some());
+    }
+
+    #[test]
+    fn test_line_formatter_new_with_all() {
+        let formatter = LineFormatter::new(
+            Some(vec!["include".to_string()]),
+            Some(vec!["exclude".to_string()]),
+            true,
+        )
+        .unwrap();
+        assert!(formatter.get_include_regex().is_some());
+        assert!(formatter.get_exclude_regex().is_some());
+    }
+
+    #[test]
+    fn test_process_line_no_filters() {
+        let formatter = LineFormatter::new(None, None, true).unwrap();
+        let line = "this is a test line";
+        assert_eq!(formatter.process_line(line), Some(Cow::from(line)));
+    }
+
+    #[test]
+    fn test_process_line_include_match() {
+        let formatter = LineFormatter::new(Some(vec!["test".to_string()]), None, true).unwrap();
+        let line = "this is a test line";
+        assert_eq!(formatter.process_line(line), Some(Cow::from(line)));
+    }
+
+    #[test]
+    fn test_process_line_include_no_match() {
+        let formatter = LineFormatter::new(Some(vec!["other".to_string()]), None, true).unwrap();
+        let line = "this is a test line";
+        assert!(formatter.process_line(line).is_none());
+    }
+
+    #[test]
+    fn test_process_line_exclude_match() {
+        let formatter = LineFormatter::new(None, Some(vec!["test".to_string()]), true).unwrap();
+        let line = "this is a test line";
+        assert!(formatter.process_line(line).is_none());
+    }
+
+    #[test]
+    fn test_process_line_exclude_no_match() {
+        let formatter = LineFormatter::new(None, Some(vec!["other".to_string()]), true).unwrap();
+        let line = "this is a test line";
+        assert_eq!(formatter.process_line(line), Some(Cow::from(line)));
+    }
+
+    #[test]
+    fn test_process_line_include_and_exclude_match() {
+        let formatter =
+            LineFormatter::new(Some(vec!["test".to_string()]), Some(vec!["line".to_string()]), true).unwrap();
+        let line = "this is a test line";
+        assert!(formatter.process_line(line).is_none());
+    }
+
+    #[test]
+    fn test_process_line_highlighting() {
+        let formatter = LineFormatter::new(None, None, true).unwrap();
+        let line = "this is a CRITICAL line";
+        let expected = "this is a ".to_string() + &"CRITICAL".bright_red().bold().to_string() + " line";
+        assert_eq!(formatter.process_line(line), Some(Cow::from(expected)));
+    }
+
+    #[test]
+    fn test_process_line_empty_string() {
+        let formatter = LineFormatter::new(None, None, false).unwrap();
+        let line = "";
+        assert!(formatter.process_line(line).is_none());
+    }
+}

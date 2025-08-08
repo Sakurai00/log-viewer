@@ -27,6 +27,10 @@ fn compile_words_to_regex(words: &[String]) -> Result<Option<Regex>> {
 }
 
 pub fn should_display_line(line: &str, include_regex: &Option<Regex>, exclude_regex: &Option<Regex>) -> bool {
+    if line.is_empty() {
+        return false;
+    }
+
     let passes_exclusion_filter = exclude_regex.as_ref().is_none_or(|re| !re.is_match(line));
     let passes_inclusion_filter = include_regex.as_ref().is_none_or(|re| re.is_match(line));
 
