@@ -58,7 +58,7 @@ impl Highlighter {
         })
     }
 
-    pub fn highlight<'a>(&self, line: &'a str) -> Cow<'a, str> {
+    pub fn apply<'a>(&self, line: &'a str) -> Cow<'a, str> {
         let mut line: Cow<'a, str> = Cow::Borrowed(line);
 
         for rule in &self.rules {
@@ -104,7 +104,7 @@ fn apply_style(text: &str, text_color: &Color, text_style: &Style) -> ColoredStr
 #[cfg(test)]
 mod tests {
     use super::{apply_style, Color, Highlighter, Style};
-    use colored::{control, Colorize};
+    use colored::Colorize;
 
     #[test]
     fn creates_default_highlight_rules() {
@@ -123,45 +123,41 @@ mod tests {
     fn highlight_returns_input_when_no_match_exists() {
         let highlighter = Highlighter::new().unwrap();
         let line = "this is a normal line";
-        let highlighted_line = highlighter.highlight(line);
+        let highlighted_line = highlighter.apply(line);
         assert_eq!(highlighted_line, line);
     }
 
     #[test]
     fn highlight_applies_configured_critical_rule() {
-        control::set_override(true);
         let highlighter = Highlighter::new().unwrap();
         let line = "this is a foo line";
-        let highlighted_line = highlighter.highlight(line);
+        let highlighted_line = highlighter.apply(line);
         assert_eq!(
             highlighted_line,
-            "this is a ".to_string() + &"foo".bright_red().bold().to_string() + " line"
+            "this is a ".to_string() + &apply_style("foo", &Color::BrightRed, &Style::Bold).to_string() + " line"
         );
-        control::unset_override();
     }
 
     #[test]
     fn highlight_applies_multiple_rules() {
-        control::set_override(true);
         let highlighter = Highlighter::new().unwrap();
         let line = "foo warning success";
-        let highlighted_line = highlighter.highlight(line);
+        let highlighted_line = highlighter.apply(line);
         assert_eq!(
             highlighted_line,
-            "foo".bright_red().bold().to_string()
+            apply_style("foo", &Color::BrightRed, &Style::Bold).to_string()
                 + " "
-                + &"warning".yellow().underline().to_string()
+                + &apply_style("warning", &Color::Yellow, &Style::Underline).to_string()
                 + " "
-                + &"success".cyan().to_string()
+                + &apply_style("success", &Color::Cyan, &Style::Normal).to_string()
         );
-        control::unset_override();
     }
 
     #[test]
     fn highlight_handles_empty_string() {
         let highlighter = Highlighter::new().unwrap();
         let line = "";
-        let highlighted_line = highlighter.highlight(line);
+        let highlighted_line = highlighter.apply(line);
         assert_eq!(highlighted_line, "");
     }
 }

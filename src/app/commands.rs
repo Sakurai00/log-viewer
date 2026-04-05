@@ -1,3 +1,3 @@
 pub mod cat;
-pub mod output;
+pub mod shared;
 pub mod watch;
