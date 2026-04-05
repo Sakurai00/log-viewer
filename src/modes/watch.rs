@@ -12,10 +12,15 @@ pub async fn run(log_files: Vec<String>, formatter: LineFormatter) -> Result<()>
             .with_context(|| format!("Failed to read file: {file}"))?;
     }
 
-    while let Ok(Some(line)) = log_reader.next_line().await {
+    while let Some(line) = log_reader
+        .next_line()
+        .await
+        .with_context(|| format!("Failed while watching log files: {}", log_files.join(", ")))?
+    {
         if let Some(processed_line) = formatter.process_line(line.line()) {
             println!("{processed_line}");
         }
     }
+
     Ok(())
 }
