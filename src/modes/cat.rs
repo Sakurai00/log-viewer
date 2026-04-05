@@ -3,6 +3,7 @@ use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 use crate::formatter::lineformatter::LineFormatter;
+use crate::modes::output::{write_processed_line, NewlineMode};
 
 pub async fn run(log_files: Vec<String>, formatter: LineFormatter) -> Result<()> {
     for file_path in log_files {
@@ -13,9 +14,7 @@ pub async fn run(log_files: Vec<String>, formatter: LineFormatter) -> Result<()>
         let mut line = String::new();
 
         while reader.read_line(&mut line).await? > 0 {
-            if let Some(processed_line) = formatter.process_line(&line) {
-                print!("{processed_line}");
-            }
+            write_processed_line(&line, &formatter, NewlineMode::PreserveExisting)?;
             line.clear();
         }
     }

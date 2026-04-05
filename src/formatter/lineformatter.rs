@@ -2,13 +2,12 @@ use anyhow::Result;
 use regex::Regex;
 use std::borrow::Cow;
 
-use super::filtering::{build_exclude_regex, build_include_regex, should_display_line};
-use super::highlighting::{apply_highlighting, get_highlight_rules, HighlightRule};
+use super::filtering::FilterEngine;
+use super::highlighting::Highlighter;
 
 pub struct LineFormatter {
-    include_regex: Option<Regex>,
-    exclude_regex: Option<Regex>,
-    highlight_rules: Vec<HighlightRule>,
+    filter_engine: FilterEngine,
+    highlighter: Highlighter,
 }
 
 impl LineFormatter {
@@ -18,33 +17,32 @@ impl LineFormatter {
         disable_preset_excludes: bool,
     ) -> Result<Self> {
         Ok(Self {
-            include_regex: build_include_regex(include_words)?,
-            exclude_regex: build_exclude_regex(exclude_words, disable_preset_excludes)?,
-            highlight_rules: get_highlight_rules()?,
+            filter_engine: FilterEngine::new(include_words, exclude_words, disable_preset_excludes)?,
+            highlighter: Highlighter::new()?,
         })
     }
 
     pub fn process_line<'a>(&self, line: &'a str) -> Option<Cow<'a, str>> {
-        if should_display_line(line, &self.include_regex, &self.exclude_regex) {
-            Some(apply_highlighting(line, &self.highlight_rules))
+        if self.filter_engine.should_display(line) {
+            Some(self.highlighter.highlight(line))
         } else {
             None
         }
     }
 
     pub fn get_include_regex(&self) -> &Option<Regex> {
-        &self.include_regex
+        self.filter_engine.include_regex()
     }
 
     pub fn get_exclude_regex(&self) -> &Option<Regex> {
-        &self.exclude_regex
+        self.filter_engine.exclude_regex()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use colored::Colorize;
+    use colored::{control, Colorize};
 
     #[test]
     fn test_line_formatter_new_default() {
@@ -124,10 +122,12 @@ mod tests {
 
     #[test]
     fn test_process_line_highlighting() {
+        control::set_override(true);
         let formatter = LineFormatter::new(None, None, true).unwrap();
-        let line = "this is a CRITICAL line";
-        let expected = "this is a ".to_string() + &"CRITICAL".bright_red().bold().to_string() + " line";
+        let line = "this is a foo line";
+        let expected = "this is a ".to_string() + &"foo".bright_red().bold().to_string() + " line";
         assert_eq!(formatter.process_line(line), Some(Cow::from(expected)));
+        control::unset_override();
     }
 
     #[test]

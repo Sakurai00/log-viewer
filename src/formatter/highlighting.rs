@@ -5,6 +5,8 @@ use std::borrow::Cow;
 
 use crate::constants::{CRITICAL_WORDS, INFO_WORDS, WARN_WORDS};
 
+use super::matcher::build_literal_matcher_from_strs;
+
 #[allow(dead_code)]
 pub enum Color {
     Red,
@@ -29,42 +31,54 @@ pub struct HighlightRule {
     pub style: Style,
 }
 
-pub fn get_highlight_rules() -> Result<Vec<HighlightRule>> {
-    let rules = vec![
-        HighlightRule {
-            regex: Regex::new(&CRITICAL_WORDS.join("|"))?,
-            color: Color::BrightRed,
-            style: Style::Bold,
-        },
-        HighlightRule {
-            regex: Regex::new(&WARN_WORDS.join("|"))?,
-            color: Color::Yellow,
-            style: Style::Underline,
-        },
-        HighlightRule {
-            regex: Regex::new(&INFO_WORDS.join("|"))?,
-            color: Color::Cyan,
-            style: Style::Normal,
-        },
-    ];
-    Ok(rules)
+pub struct Highlighter {
+    rules: Vec<HighlightRule>,
 }
 
-pub fn apply_highlighting<'a>(line: &'a str, rules: &[HighlightRule]) -> Cow<'a, str> {
-    let mut line: Cow<'a, str> = Cow::Borrowed(line);
-
-    for rule in rules {
-        line = Cow::Owned(
-            rule.regex
-                .replace_all(&line, |caps: &regex::Captures| {
-                    let matched_word = &caps[0];
-                    apply_style(matched_word, &rule.color, &rule.style).to_string()
-                })
-                .into_owned(),
-        );
+impl Highlighter {
+    pub fn new() -> Result<Self> {
+        Ok(Self {
+            rules: vec![
+                HighlightRule {
+                    regex: build_literal_matcher_from_strs(CRITICAL_WORDS)?.unwrap(),
+                    color: Color::BrightRed,
+                    style: Style::Bold,
+                },
+                HighlightRule {
+                    regex: build_literal_matcher_from_strs(WARN_WORDS)?.unwrap(),
+                    color: Color::Yellow,
+                    style: Style::Underline,
+                },
+                HighlightRule {
+                    regex: build_literal_matcher_from_strs(INFO_WORDS)?.unwrap(),
+                    color: Color::Cyan,
+                    style: Style::Normal,
+                },
+            ],
+        })
     }
 
-    line
+    pub fn highlight<'a>(&self, line: &'a str) -> Cow<'a, str> {
+        let mut line: Cow<'a, str> = Cow::Borrowed(line);
+
+        for rule in &self.rules {
+            line = Cow::Owned(
+                rule.regex
+                    .replace_all(&line, |caps: &regex::Captures| {
+                        let matched_word = &caps[0];
+                        apply_style(matched_word, &rule.color, &rule.style).to_string()
+                    })
+                    .into_owned(),
+            );
+        }
+
+        line
+    }
+
+    #[cfg(test)]
+    pub fn rules(&self) -> &[HighlightRule] {
+        &self.rules
+    }
 }
 
 fn apply_style(text: &str, text_color: &Color, text_style: &Style) -> ColoredString {
@@ -89,61 +103,65 @@ fn apply_style(text: &str, text_color: &Color, text_style: &Style) -> ColoredStr
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use colored::Colorize;
+    use super::{apply_style, Color, Highlighter, Style};
+    use colored::{control, Colorize};
 
     #[test]
-    fn test_get_highlight_rules() {
-        let rules = get_highlight_rules();
-        assert!(rules.is_ok());
-        assert_eq!(rules.unwrap().len(), 3);
+    fn creates_default_highlight_rules() {
+        let highlighter = Highlighter::new().unwrap();
+        assert_eq!(highlighter.rules().len(), 3);
     }
 
     #[test]
-    fn test_apply_style() {
+    fn apply_style_returns_colored_text() {
         let text = "test";
         let colored_text = apply_style(text, &Color::Red, &Style::Bold);
         assert_eq!(colored_text, "test".red().bold());
     }
 
     #[test]
-    fn test_apply_highlighting_no_match() {
-        let rules = get_highlight_rules().unwrap();
+    fn highlight_returns_input_when_no_match_exists() {
+        let highlighter = Highlighter::new().unwrap();
         let line = "this is a normal line";
-        let highlighted_line = apply_highlighting(line, &rules);
+        let highlighted_line = highlighter.highlight(line);
         assert_eq!(highlighted_line, line);
     }
 
     #[test]
-    fn test_apply_highlighting_single_match() {
-        let rules = get_highlight_rules().unwrap();
-        let line = "this is a CRITICAL line";
-        let highlighted_line = apply_highlighting(line, &rules);
+    fn highlight_applies_configured_critical_rule() {
+        control::set_override(true);
+        let highlighter = Highlighter::new().unwrap();
+        let line = "this is a foo line";
+        let highlighted_line = highlighter.highlight(line);
         assert_eq!(
             highlighted_line,
-            "this is a ".to_string() + &"CRITICAL".bright_red().bold().to_string() + " line"
+            "this is a ".to_string() + &"foo".bright_red().bold().to_string() + " line"
         );
+        control::unset_override();
     }
 
     #[test]
-    fn test_apply_highlighting_multiple_matches() {
-        let rules = get_highlight_rules().unwrap();
-        let line = "this is a CRITICAL line with a WARN";
-        let highlighted_line = apply_highlighting(line, &rules);
+    fn highlight_applies_multiple_rules() {
+        control::set_override(true);
+        let highlighter = Highlighter::new().unwrap();
+        let line = "foo warning success";
+        let highlighted_line = highlighter.highlight(line);
         assert_eq!(
             highlighted_line,
-            "this is a ".to_string()
-                + &"CRITICAL".bright_red().bold().to_string()
-                + " line with a "
-                + &"WARN".yellow().underline().to_string()
+            "foo".bright_red().bold().to_string()
+                + " "
+                + &"warning".yellow().underline().to_string()
+                + " "
+                + &"success".cyan().to_string()
         );
+        control::unset_override();
     }
 
     #[test]
-    fn test_apply_highlighting_empty_string() {
-        let rules = get_highlight_rules().unwrap();
+    fn highlight_handles_empty_string() {
+        let highlighter = Highlighter::new().unwrap();
         let line = "";
-        let highlighted_line = apply_highlighting(line, &rules);
+        let highlighted_line = highlighter.highlight(line);
         assert_eq!(highlighted_line, "");
     }
 }
