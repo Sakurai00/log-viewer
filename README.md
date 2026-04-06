@@ -32,11 +32,10 @@ log-viewer [OPTIONS] [LOG_FILES...]
 
 ### Arguments
 
-*   `<LOG_FILES...>`: One or more paths to log files to process. If not specified, it defaults to `/var/log/messages`.
+*   `[LOG_FILES...]`: One or more log files to process. If omitted, `log-viewer` defaults to `/var/log/messages`.
 
 ### Options
 
-*   `-l`, `--log-files <LOG_FILES...>`: Specify one or more log files to process.
 *   `-d`, `--disable-preset-excludes`: Disable preset exclusion rules. By default, `log-viewer` might exclude certain common log patterns. Use this flag to show all lines.
 *   `-e`, `--exclude-words <EXCLUDE_WORDS...>`: Exclude lines containing any of the specified words.
 *   `-i`, `--include-words <INCLUDE_WORDS...>`: Include only lines containing any of the specified words.
@@ -52,12 +51,12 @@ log-viewer [OPTIONS] [LOG_FILES...]
 
 2.  **Watch a specific log file:**
     ```bash
-    log-viewer -l /path/to/your/app.log
+    log-viewer /path/to/your/app.log
     ```
 
 3.  **Display content of multiple log files once (cat mode):**
     ```bash
-    log-viewer --cat -l /var/log/syslog /var/log/auth.log
+    log-viewer --cat /var/log/syslog /var/log/auth.log
     ```
 
 4.  **Watch a log file, excluding lines with "error" or "fail":**
@@ -77,10 +76,10 @@ log-viewer [OPTIONS] [LOG_FILES...]
 
 7.  **Disable preset exclusions and watch a log file:**
     ```bash
-    log-viewer -d -l /var/log/kern.log
+    log-viewer -d /var/log/kern.log
     ```
 
 8.  **Enable debug mode:**
     ```bash
-    log-viewer --debug -l /var/log/messages
+    log-viewer --debug /var/log/messages
     ```
