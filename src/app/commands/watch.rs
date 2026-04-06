@@ -1,9 +1,10 @@
 use anyhow::{Context, Result};
 use linemux::MuxedLines;
 
-use crate::formatter::lineformatter::LineFormatter;
+use crate::app::commands::shared::{emit_processed_line, OutputMode};
+use crate::core::processor::LineProcessor;
 
-pub async fn run(log_files: Vec<String>, formatter: LineFormatter) -> Result<()> {
+pub async fn run(log_files: Vec<String>, processor: LineProcessor) -> Result<()> {
     let mut log_reader = MuxedLines::new()?;
     for file in &log_files {
         log_reader
@@ -17,9 +18,7 @@ pub async fn run(log_files: Vec<String>, formatter: LineFormatter) -> Result<()>
         .await
         .with_context(|| format!("Failed while watching log files: {}", log_files.join(", ")))?
     {
-        if let Some(processed_line) = formatter.process_line(line.line()) {
-            println!("{processed_line}");
-        }
+        emit_processed_line(line.line(), &processor, OutputMode::Append)?;
     }
 
     Ok(())
