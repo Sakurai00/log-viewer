@@ -2,12 +2,11 @@ use anyhow::Result;
 use regex::Regex;
 
 use crate::constants::PRESET_EXCLUDE_WORDS;
-
-use super::matcher::build_literal_matcher;
+use crate::word_pattern::build_word_pattern;
 
 pub struct LineFilter {
-    include_matcher: Option<Regex>,
-    exclude_matcher: Option<Regex>,
+    include_regex: Option<Regex>,
+    exclude_regex: Option<Regex>,
 }
 
 impl LineFilter {
@@ -22,8 +21,8 @@ impl LineFilter {
         }
 
         Ok(Self {
-            include_matcher: build_literal_matcher(&include_words.unwrap_or_default())?,
-            exclude_matcher: build_literal_matcher(&exclude_word_list)?,
+            include_regex: build_word_pattern(&include_words.unwrap_or_default())?,
+            exclude_regex: build_word_pattern(&exclude_word_list)?,
         })
     }
 
@@ -32,18 +31,18 @@ impl LineFilter {
             return false;
         }
 
-        let passes_exclusion_filter = self.exclude_matcher.as_ref().is_none_or(|re| !re.is_match(line));
-        let passes_inclusion_filter = self.include_matcher.as_ref().is_none_or(|re| re.is_match(line));
+        let passes_exclusion_filter = self.exclude_regex.as_ref().is_none_or(|re| !re.is_match(line));
+        let passes_inclusion_filter = self.include_regex.as_ref().is_none_or(|re| re.is_match(line));
 
         passes_exclusion_filter && passes_inclusion_filter
     }
 
-    pub fn include_matcher(&self) -> &Option<Regex> {
-        &self.include_matcher
+    pub fn include_regex(&self) -> &Option<Regex> {
+        &self.include_regex
     }
 
-    pub fn exclude_matcher(&self) -> &Option<Regex> {
-        &self.exclude_matcher
+    pub fn exclude_regex(&self) -> &Option<Regex> {
+        &self.exclude_regex
     }
 }
 
@@ -52,7 +51,7 @@ mod tests {
     use super::LineFilter;
 
     #[test]
-    fn builds_include_matcher_from_words() {
+    fn builds_include_regex_from_words() {
         let filter = LineFilter::new(
             Some(vec![
                 "error".to_string(),
@@ -65,14 +64,14 @@ mod tests {
             true,
         )
         .unwrap();
-        let regex = filter.include_matcher().as_ref().unwrap();
+        let regex = filter.include_regex().as_ref().unwrap();
         assert!(regex.is_match("this is a critical error"));
         assert!(regex.is_match("a fatal exception occurred"));
         assert!(!regex.is_match("this is just info"));
     }
 
     #[test]
-    fn builds_exclude_matcher_with_user_and_preset_words() {
+    fn builds_exclude_regex_with_user_and_preset_words() {
         let filter = LineFilter::new(
             None,
             Some(vec![
@@ -85,7 +84,7 @@ mod tests {
             false,
         )
         .unwrap();
-        let regex = filter.exclude_matcher().as_ref().unwrap();
+        let regex = filter.exclude_regex().as_ref().unwrap();
         assert!(regex.is_match("this is a debug message"));
         assert!(regex.is_match("filter out this spam"));
         assert!(regex.is_match("verbose logging enabled"));
