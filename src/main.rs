@@ -1,15 +1,21 @@
 use anyhow::Result;
-use clap::Parser;
 use std::process;
 
 mod cli;
+mod config;
 mod constants;
 mod debug;
-mod formatter;
-mod modes;
+mod line_highlighter;
+mod line_filter;
+mod line_pipeline;
+mod run;
+mod word_pattern;
 
-use cli::Args;
-use formatter::lineformatter::LineFormatter;
+use clap::Parser;
+
+use crate::cli::Args;
+use crate::config::AppConfig;
+use crate::line_pipeline::LinePipeline;
 
 #[tokio::main]
 async fn main() {
@@ -21,19 +27,22 @@ async fn main() {
 
 async fn run() -> Result<()> {
     let args = Args::parse();
+    let config = AppConfig::from(args);
 
-    let formatter = LineFormatter::new(args.include_words, args.exclude_words, args.disable_preset_excludes)?;
+    let pipeline = LinePipeline::new(
+        config.include_words.clone(),
+        config.exclude_words.clone(),
+        config.disable_preset_excludes,
+    )?;
 
-    let log_files = args.log_files;
-
-    if args.debug {
-        debug::print_debug_info(&log_files, formatter.get_include_regex(), formatter.get_exclude_regex());
+    if config.debug {
+        debug::print_debug_info(&config.log_files, pipeline.include_regex(), pipeline.exclude_regex());
     }
 
-    if args.cat {
-        modes::cat::run(log_files, formatter).await?;
+    if config.use_cat_mode {
+        run::run_cat(config.log_files, pipeline).await?;
     } else {
-        modes::watch::run(log_files, formatter).await?;
+        run::run_watch(config.log_files, pipeline).await?;
     }
 
     Ok(())
